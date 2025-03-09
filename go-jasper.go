@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strconv"
 )
 
@@ -40,10 +41,10 @@ type DbConnection struct {
 type GoJasper struct {
 	Executable string
 	//-f view, print, pdf, rtf, xls, xlsMeta, xlsx, docx, odt, ods, pptx, csv, csvMeta, html, xhtml, xml, jrprint
-	Format string `json:"format"`
-	Locale string
-	Output string
-
+	Format       string `json:"format"`
+	Locale       string
+	Output       string
+	Verbose      bool
 	Parameters   []Parameter `json:"parameters"`
 	Resources    string
 	DbConnection *DbConnection `json:"db_connection"`
@@ -104,16 +105,16 @@ func NewGoJasper(datasourceType string, dbConnection *DbConnection, parameters [
 func (g *GoJasper) Compile(reportSource string) error {
 
 	if _, err := os.Stat(reportSource); os.IsNotExist(err) {
-		return errors.New("Invalid input file")
+		return errors.New("invalid input file")
 	}
+
 	args := []string{"compile", filepath.Clean(reportSource)}
 
 	if len(g.Output) > 0 {
 		args = append(args, "-o")
 		args = append(args, g.Output)
 	}
-	_, err := g.execute(args...)
-	return err
+	return g.execute(args...)
 }
 
 func (g *GoJasper) Process(input string) ([]byte, error) {
@@ -213,31 +214,50 @@ func (g *GoJasper) Process(input string) ([]byte, error) {
 
 	}
 
-	return g.execute(args...)
+	if err := g.execute(args...); err != nil {
+		return nil, err
+	}
+
+	b, err := os.ReadFile(fmt.Sprintf("%s.%s", g.Output, g.Format))
+	if err != nil {
+		return nil, err
+	}
+
+	return b, err
 }
 
-func (g *GoJasper) execute(args ...string) ([]byte, error) {
+func (g *GoJasper) execute(args ...string) error {
 	if len(args) < 2 {
-		return nil, errors.New("Invalid command executable")
+		return errors.New("invalid command executable")
 	}
 
 	if _, err := os.Stat(g.Executable); os.IsNotExist(err) {
-		return nil, errors.New("Invalid resource directory")
+		return errors.New("invalid resource directory")
 	}
-	fmt.Println(args)
-	cmd := exec.Command(g.Executable, args...)
+	if g.Verbose {
+		args = slices.Concat([]string{"-v"}, args)
+		fmt.Println(args)
+	}
 
-	var out bytes.Buffer
+	cmd := exec.Command(g.Executable, args...)
+	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	cmd.Stdout = &out
+	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println("Error on execute JasperStarter:", err)
-		fmt.Println("error:", stderr.String())
+		if stderr.Bytes() != nil {
+			return fmt.Errorf("%s", stderr.String())
+		}
+		return err
 
 	}
 
-	return cmd.Output()
+	if g.Verbose {
+
+		fmt.Println(stdout.String())
+	}
+
+	return nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	gojasper "github.com/evertonvps/go-jasper"
 )
@@ -15,9 +16,13 @@ func main() {
 	j := gojasper.NewGoJasperJsonData(jsonFile, jsonQuery, parms, "pdf", output)
 
 	j.Executable = "../JasperStarter/bin/jasperstarter"
+	j.Verbose = true
 
-	j.Compile("post-json.jrxml")
+	if err := j.Compile("post-json.jrxml"); err != nil {
+		fmt.Println(err.Error())
+	}
 
+	j.Output = fmt.Sprintf("./tmp/%d", time.Now().UnixMilli())
 	if b, err := j.Process("post-json.jasper"); err != nil {
 		fmt.Println(err.Error())
 	} else {

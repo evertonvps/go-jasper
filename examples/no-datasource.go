@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	gojasper "github.com/evertonvps/go-jasper"
 )
@@ -22,8 +23,12 @@ func main() {
 		Output: output,
 	}
 
-	j.Compile("hello_world.jrxml")
+	j.Verbose = true
+	if err := j.Compile("hello_world.jrxml"); err != nil {
+		fmt.Println(err.Error())
+	}
 
+	j.Output = fmt.Sprintf("./tmp/%d", time.Now().UnixMilli())
 	if b, err := j.Process("hello_world.jasper"); err != nil {
 		fmt.Println(err.Error())
 	} else {
