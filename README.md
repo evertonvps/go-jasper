@@ -26,11 +26,16 @@ Examples
 	}
 
 	j := gojasper.NewGoJasper("postgres", dbConnection, parms, "pdf")
+	j.Verbose = true
 	j.Output = "."
 	j.Executable = "../jasperstarter/bin/jasperstarter"
 	j.DbConnection.JdbcDir = "../jasperstarter/jdbc"
-	j.Compile("postgres-report.jrxml")
 
+	if err := j.Compile("postgres-report.jrxml"); err != nil {
+		fmt.Println(err.Error())
+	}
+
+	j.Output = fmt.Sprintf("./tmp/%d", time.Now().UnixMilli())
 	if b, err := j.Process("postgres-report.jasper"); err != nil {
 		fmt.Println(err.Error())
 	} else {
@@ -48,9 +53,13 @@ Examples
 	j := gojasper.NewGoJasperJsonData(jsonFile, jsonQuery, parms, "pdf", output)
 
 	j.Executable = "../JasperStarter/bin/jasperstarter"
+	j.Verbose = true
 
-	j.Compile("post-json.jrxml")
+	if err := j.Compile("post-json.jrxml"); err != nil {
+		fmt.Println(err.Error())
+	}
 
+	j.Output = fmt.Sprintf("./tmp/%d", time.Now().UnixMilli())
 	if b, err := j.Process("post-json.jasper"); err != nil {
 		fmt.Println(err.Error())
 	} else {
@@ -75,8 +84,12 @@ Examples
 		Output: output,
 	}
 
-	j.Compile("hello_world.jrxml")
+	j.Verbose = true
+	if err := j.Compile("hello_world.jrxml"); err != nil {
+		fmt.Println(err.Error())
+	}
 
+	j.Output = fmt.Sprintf("./tmp/%d", time.Now().UnixMilli())
 	if b, err := j.Process("hello_world.jasper"); err != nil {
 		fmt.Println(err.Error())
 	} else {
